@@ -58,23 +58,40 @@ sync_to_restore_directory() {
 }
 
 entrypoint() {
-    while getopts "r:sf" OPT; do
-        case "$OPT" in
-        s)
-            svc_common="true"
-            ;;
-        r)
-            custom_restore_dir=${OPTARG}
-            ;;
-        f)
-            fusion_svc_common="true"
-            ;;
-        *)
-            echo "Usage: $0 [-s|-f service type OPTIONAL] [-r restore folder name OPTIONAL]" >&2
-            exit 1
-            ;;
-        esac
-    done
+while [ "$1" != "" ]; 
+do
+   case $1 in
+    -s | --service_common )
+        svc_common="true"
+        ;;
+    -f | --fusion_services )
+        fusion_svc_common="true"
+        ;;
+    -r | --restore_dir )
+        shift
+        custom_restore_dir="$1"
+        ;;
+    -h | --help ) 
+         echo "Usage: efs_backup_restore.sh [OPTIONS]"
+         echo "OPTION includes:"
+         echo "   -s | --service_common - Restore deployments belonging only to services/service-common"
+         echo "   -f | --fusion_services - Restore deployments belonging to services/service-common and services/fusion"
+         echo "   -r | --restore_dir - Specify custom restore folder"
+         echo "   -h | --help - displays this message"
+         exit
+      ;;
+    * ) 
+        echo "Invalid option: $1"
+        echo "Usage: efs_backup_restore.sh [-s | --service_common] [-f | --fusion_services ] [-r | --restore_dir <directory_name> ]"
+         echo "   -s | --service_common - Restore deployments belonging only to services/service-common"
+         echo "   -f | --fusion_services - Restore deployments belonging to services/service-common and services/fusion"
+         echo "   -r | --restore_dir - Specify custom restore folder"
+         echo "   -h | --help - displays this message"
+        exit
+       ;;
+  esac
+  shift
+done
 
     if [ -n "${custom_restore_dir}" ]; then
         restore_folder=${custom_restore_dir}
