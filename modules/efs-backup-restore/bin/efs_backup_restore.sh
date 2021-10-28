@@ -67,7 +67,7 @@ do
     -f | --fusion-services )
         fusion_svc_common="true"
         ;;
-    -r | --restore_dir )
+    -r | --restore-dir )
         shift
         custom_restore_dir="$1"
         ;;
@@ -76,16 +76,16 @@ do
          echo "OPTION includes:"
          echo "   -s | --service-common - Restore deployments belonging only to services/service-common"
          echo "   -f | --fusion-services - Restore deployments belonging to services/service-common and services/fusion"
-         echo "   -r | --restore_dir - Specify custom restore folder"
+         echo "   -r | --restore-dir - Specify custom restore folder"
          echo "   -h | --help - displays this message"
          exit
       ;;
     * ) 
         echo "Invalid option: $1"
-        echo "Usage: efs_backup_restore.sh [-s | --service-common] [-f | --fusion-services ] [-r | --restore_dir <directory_name> ]"
+        echo "Usage: efs_backup_restore.sh [-s | --service-common] [-f | --fusion-services ] [-r | --restore-dir <directory_name> ]"
          echo "   -s | --service-common - Restore deployments belonging only to services/service-common"
          echo "   -f | --fusion-services - Restore deployments belonging to services/service-common and services/fusion"
-         echo "   -r | --restore_dir - Specify custom restore folder"
+         echo "   -r | --restore-dir - Specify custom restore folder"
          echo "   -h | --help - displays this message"
         exit
        ;;
