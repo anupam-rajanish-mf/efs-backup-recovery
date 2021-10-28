@@ -95,6 +95,7 @@ done
 
     if [ -n "${custom_restore_dir}" ]; then
         restore_folder=${custom_restore_dir}
+        if ! directory_exists "$common_mount_location/$restore_folder";then echo "Specified restore directory does not exist"; exit 1; fi
         else
         if directory_exists "$common_mount_location/aws-backup-restore*";then 
         restore_folder=$(basename $( ls -dtr1 $common_mount_location/aws-backup-restore* | tail -1 ))
