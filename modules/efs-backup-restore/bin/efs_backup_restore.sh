@@ -21,9 +21,11 @@ declare -A svc_common_points=(["reporting-svc"]="reporting" ["fusion-user-manage
 
 svc_common="false"
 fusion_svc_common="false"
+older_backup="false"
 restore_folder="" 
 final_mount_points=()
 final_pods=()
+backup_folder=""
 
 confirm() {
     read -r -p "${1:-Are you sure? [y/N]} " response
@@ -47,14 +49,56 @@ sync_to_restore_directory() {
     deployments=($final_pods)
     for i in "${!pv_mount_paths[@]}"; do
         if directory_exists "$common_mount_location/$restore_folder/${pv_mount_paths[i]}/backup";then
-        latest_backup=$(ls -dtr1 $common_mount_location/$restore_folder/${pv_mount_paths[i]}/backup/* | tail -1)
-        sudo rsync -avrHAXS $latest_backup/ $common_mount_location/${pv_mount_paths[i]}/restore
+        if $older_backup; then
+        backupdir=$common_mount_location/$restore_folder/${pv_mount_paths[i]}/backup/$backup_folder
+        else
+        backupdir=$(ls -dtr1 $common_mount_location/$restore_folder/${pv_mount_paths[i]}/backup/* | tail -1)
+        fi
+        sudo rsync -avrHAXS $backupdir/ $common_mount_location/${pv_mount_paths[i]}/restore
         else
          echo "Failed to find backup directory for ${deployments[i]}. Exiting"
          exit 1
         fi  
     done
     echo "Sync to restore completed successfully for ${deployments[@]}"
+}
+
+choose_backup_folder() {
+declare -A backups
+pv_mount_paths=($final_mount_points)
+deployments=($final_pods)
+for i in "${!pv_mount_paths[@]}"; do
+    for backup in $common_mount_location/$restore_folder/${pv_mount_paths[i]}/backup/*
+    do
+     basebackup=$(basename $backup)
+     if [ -n "${backups[$basebackup]}" ]; then 
+     backups["$basebackup"]=$((backups["$basebackup"]+1))
+     else
+     backups["$basebackup"]=1
+    fi
+    done
+done
+declare -a finalbackups
+j=1
+for i in "${!backups[@]}"
+do
+ if [ "${backups[$i]}" == "${#pv_mount_paths[@]}" ] ;then
+ finalbackups[j++]="$i"
+ fi
+done
+if (( ${#finalbackups[@]} == 0 )); then echo "No synchronized backups found for deployments; Exiting"; exit 1; fi
+
+echo "There are ${#finalbackups[@]} backups for the deployments"
+for((i=1;i<=${#finalbackups[@]};i++))
+do
+    echo $i "${finalbackups[i]}"
+done
+echo "Which backup do you want to choose?"
+echo -n "> "
+read i
+if (( $i < 1 )) || (( $i > ${#finalbackups[@]} )); then echo "Invalid index specified; Exiting"; exit 1; fi
+echo "You have selected ${finalbackups[$i]}"
+backup_folder=${finalbackups[$i]}
 }
 
 entrypoint() {
@@ -67,6 +111,9 @@ do
     -f | --fusion-services )
         fusion_svc_common="true"
         ;;
+    -o | --older-backup )
+        older_backup="true"
+        ;;        
     -r | --restore-dir )
         shift
         custom_restore_dir="$1"
@@ -76,6 +123,7 @@ do
          echo "OPTION includes:"
          echo "   -s | --service-common - Restore deployments belonging only to services/service-common"
          echo "   -f | --fusion-services - Restore deployments belonging to services/service-common and services/fusion"
+         echo "   -o | --older-backup - To restore from available older backups"
          echo "   -r | --restore-dir - Specify custom restore folder"
          echo "   -h | --help - displays this message"
          exit
@@ -85,6 +133,7 @@ do
         echo "Usage: efs_backup_restore.sh [-s | --service-common] [-f | --fusion-services ] [-r | --restore-dir <directory_name> ]"
          echo "   -s | --service-common - Restore deployments belonging only to services/service-common"
          echo "   -f | --fusion-services - Restore deployments belonging to services/service-common and services/fusion"
+         echo "   -o | --older-backup - To restore from available older backups"         
          echo "   -r | --restore-dir - Specify custom restore folder"
          echo "   -h | --help - displays this message"
         exit
@@ -112,12 +161,16 @@ done
         final_mount_points=${svc_common_points[@]}
         final_pods="${!svc_common_points[@]}"
     else
-        echo "No service type specified. Defaulting to All Pods in Service-Common EFS."
+        echo "No service type specified. Defaulting to Fusion Services pods."
         final_mount_points=${fusion_svc_common_points[@]}
         final_pods="${!fusion_svc_common_points[@]}"                                
     fi
 
-    echo "You are about to sync to restore directories of: " ${final_pods[@]}
+    if $older_backup; then
+    choose_backup_folder
+    fi
+
+    echo "You are about to restore directories of: " ${final_pods[@]}
 
     confirm && sync_to_restore_directory
 }
