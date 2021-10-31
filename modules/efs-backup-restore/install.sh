@@ -19,7 +19,7 @@ set -e
 readonly script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Move the bin files into /usr/local/bin
-sudo cp "${script_path}"/bin/efs_backup_restore.sh /usr/local/bin
+sudo cp "${script_path}"/bin/efs-backup-restore /usr/local/bin
 
 # Change ownership and permissions
-sudo chmod +x /usr/local/bin/efs_backup_restore.sh
+sudo chmod +x /usr/local/bin/efs-backup-restore
